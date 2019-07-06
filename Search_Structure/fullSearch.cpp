@@ -1,4 +1,5 @@
 #include "fullSearch.h"
+#include "Btree.h"
 using namespace std;
 
 unsigned long hash33(char *str)
@@ -36,10 +37,12 @@ void buildInvertTable(vector<vector<hashNode>>& hashTable, const char* dbName)
     char block[1000] = {}, *token, *title;
     while(1)
     {
-        fread(block, sizeof(char), 500, fptr);
         if(feof(fptr))
             break;
-
+        fread(block, sizeof(char), 500, fptr);
+        /*if 500 char are '\0', this block was deleted from data*/
+        if(strlen(block) == 0)
+            continue;
         title = strtok(block, "\t");
         title = strtok(NULL, "\t"); /*get title*/
 
@@ -106,7 +109,7 @@ void readFile(vector<int>& offset, const char* fileName)
 }
 // Search
 // /*Talib Kweli - Move Something (DogmaMts Remix) - YouTube*/
-vector<int> fullSearch(vector<vector<hashNode>>& hashTable, char* input)
+vector<int> fullSearch(vector<vector<hashNode>>& hashTable, char* input, const char* dbName)
 {
     vector<vector<int>> allSets;
     vector<int> oneSet;
@@ -123,6 +126,9 @@ vector<int> fullSearch(vector<vector<hashNode>>& hashTable, char* input)
             if(it->key.compare(token) == 0)
             {
                 // cout << ' ' << it->key << " "<<it->offset<<endl;
+                for(auto deleteTBit = deleteTB.begin(); deleteTBit != deleteTB.end(); deleteTBit++)
+                    if(*deleteTBit == it->offset)
+                        continue;
                 oneSet.push_back(it->offset);
             }
         }
@@ -134,26 +140,8 @@ vector<int> fullSearch(vector<vector<hashNode>>& hashTable, char* input)
 
     vector<int> intersection = getIntersection(allSets);
 
-    readFile(intersection, "./YouTube/data.rec");
+    char fileName[100] = {};
+    sprintf(fileName, "./%s/data.rec", dbName);
+    readFile(intersection, fileName);
     return intersection;
 }
-
-//
-// int main()
-// {
-//     vector<vector<hashNode>> hashTable;
-//     hashTable.resize(200000);
-//     buildInvertTable(hashTable);
-//
-//     char input[500];
-//     while(1)
-//     {
-//         cout<<"input search key:";
-//         cin.getline(input, 500);
-//         cout<<input<<endl;
-//         if(strcmp(input, "q") == 0)
-//             break;
-//         fullSearch(hashTable, input);
-//     }
-//     return 0;
-// }

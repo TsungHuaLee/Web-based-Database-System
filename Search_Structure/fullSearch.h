@@ -17,8 +17,12 @@ void buildInvertTable(vector<vector<hashNode>>& hashTable, const char* dbName = 
 
 vector<int> getIntersection(vector<vector<int>> &sets);
 
-void readFile(vector<int>& offset, const char* fileName);
+void readFile(vector<int>& offset, const char* fileName = "./YouTube/data.rec");
 
-vector<int> fullSearch(vector<vector<hashNode>>& hashTable, char* input = NULL);
+/*
+    search input from hashTable,
+    return a vector of offset, using readFile to get data
+*/
+vector<int> fullSearch(vector<vector<hashNode>>& hashTable, char* input = NULL, const char* dbName= "YouTube");
 
 #endif

@@ -2,6 +2,7 @@
 
 int ORDER = 100, MAXKEY;
 vector<int> ID_Offset;
+vector<int> deleteTB;
 char DB[50] = "YouTube";
 
 void InitializeNode(Node* newNode)
@@ -287,8 +288,10 @@ int searchRec(Tree* tree, const char* key)
         fread(&nullchar, sizeof(char), 1, fptr);
         fread(&id, sizeof(int), 1, fptr);
         fread(&nullchar, sizeof(char), 1, fptr);
-        if(memcmp(key, vid, (int)strlen(vid)) == 0)
+
+        if((strlen(vid) != 0) && (memcmp(key, vid, (int)strlen(vid)) == 0))
         {
+            cout<<"key = "<<key<<" vid = "<<vid<<" id = "<<id<<endl;
             found = true;
             break;
         }
@@ -344,10 +347,10 @@ int updateRec(Tree* tree, FullRec* rec)
         auto blockNum = search(tree->root, vid);
         cout<<"should insert to block"<<blockNum<<endl;
         /*update internal node*/
-        oneRec newRec;
-        strcpy(newRec.data, vid);
-        newRec.exNum = blockNum;
-        tree = Insert(tree, &newRec);
+        // oneRec newRec;
+        // strcpy(newRec.data, vid);
+        // newRec.exNum = blockNum;
+        // tree = Insert(tree, &newRec);
 
         /*write to block file*/
         int id = (int)ID_Offset.size();
@@ -361,7 +364,7 @@ int updateRec(Tree* tree, FullRec* rec)
         }
         fseek(fptr , 0, SEEK_END);
         cout<<"write out: "<<vid<<endl;
-        fwrite(&vid, 11, 1, fptr);
+        fwrite(vid, sizeof(char), 11, fptr);
         fwrite(&nullchar, sizeof(char), 1, fptr);
         fwrite(&id, sizeof(int), 1, fptr);
         fwrite(&nullchar, sizeof(char), 1, fptr);
@@ -426,34 +429,84 @@ int updateRec(Tree* tree, FullRec* rec)
 
 }
 
-// void deleteRec(Tree* tree, FullRec* rec)
-// {
-//     char *vid;
-//     vid = strtok(rec->url, "?v="); // token = youtube.com
-//     vid = strtok(rec->url, "?v="); // token = vid
-//     int blockNum = search(tree->root, vid);
-//
-//     char fileName[100]={}, nullchar = '\0';
-//     sprintf(fileName, "%s%d", preFileName, blockNum);
-//     FILE* fptr = fopen(fileName, "wb+");
-//     int idx = -1, i = 0;
-//     vector<BlockRec> vec;
-//     BlockRec tempRec;
-//     while(!feof(fptr))
-//     {
-//         fread(&tempRec.vid, 11, 1, fptr);
-//         fread(&nullchar, sizeof(char), 1, fptr);
-//         fread(&tempRec.id, sizeof(int), 1, fptr);
-//         fread(&nullchar, sizeof(char), 1, fptr);
-//         if(memcmp(vid, tempRec.vid, strlen(vid)) == 0)
-//         {
-//             idx = i;
-//         }
-//         vec.push_back(tempRec);
-//         i += 1;
-//     }
-//     fclose(fptr);
-// }
+int deleteRec(Tree* tree, FullRec* rec, const char* key)
+{
+
+    char *vid, tempUrl[500] = {};
+    if(rec != NULL)
+    {
+        strcpy(tempUrl, rec->url);
+        vid = strtok(tempUrl, "?v="); // token = youtube.com
+        vid = strtok(NULL, "?v="); // token = vid
+    }
+    else
+    {
+        vid = new char[20]();
+        memcpy(vid, key, strlen(key));
+    }
+    int id = searchRec(tree, vid);
+
+    if(id == -1)
+    {
+        return 0;
+    }
+    else
+    {
+        /*delete from data.rec*/
+        deleteTB.push_back(ID_Offset[id]);
+        char fileName[100] = {}, block[510] = {};
+        sprintf(fileName, "./%s/data.rec", DB);
+        FILE *fptr = fopen(fileName, "r+b");
+        if(fptr == NULL)
+        {
+            perror("Error when opening the file in deleteRec\n");
+            exit(EXIT_FAILURE);
+        }
+        fseek(fptr, ID_Offset[id], SEEK_SET);
+        memset(block, 0, sizeof(block));
+        fwrite(block, sizeof(char), 500, fptr);
+        fclose(fptr);
+
+        /*delete from ID_Offset by set -1*/
+        ID_Offset[id] = -1;
+
+        /*delete from block file*/
+        int blockNum = search(tree->root, key);
+
+        sprintf(fileName, "./%s/block%d", DB, blockNum);
+        fptr = fopen(fileName, "r+b");
+        fseek(fptr, 0, SEEK_SET);
+        if(fptr == NULL)
+        {
+            perror("Error when opening the file in deleteRec\n");
+            exit(EXIT_FAILURE);
+        }
+        char nullchar = '\0', temp[12] = {};
+        int id;
+        while(1)
+        {
+            if(feof(fptr))
+            {
+                fclose(fptr);
+                break;
+            }
+            fread(&temp, sizeof(char), 12, fptr);
+            fread(&id, sizeof(int), 1, fptr);
+            fread(&nullchar, sizeof(char), 1, fptr);
+            if(strncmp(vid, temp, strlen(temp)) == 0)
+            {
+                fseek(fptr, -17, SEEK_CUR);
+                char null[20] = {};
+                memset(null, 0, sizeof(null));
+                fwrite(null, sizeof(char), 17, fptr);
+                fclose(fptr);
+                break;
+            }
+        }
+        return 1;
+    }
+
+}
 
 void RewriteID_Offset()
 {

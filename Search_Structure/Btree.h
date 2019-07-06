@@ -7,7 +7,7 @@ using namespace std;
 extern int ORDER, MAXKEY;    /*one node max key = order-1, one node max child = order*/
 extern vector<int> ID_Offset;
 extern char DB[50];
-
+extern vector<int> deleteTB;
 
 typedef struct
 {
@@ -52,6 +52,10 @@ void InsertNonFULL(Node* curNode, const oneRec* newRec);
 
 Tree* Insert(Tree* tree, const oneRec* newRec);
 
+/*
+    return blockNum, which key should be.
+    use searchRec() to check it excatlly exist or not.
+*/
 int search(Node* node, const char* key);
 
 void Build(Tree* tree, TreeInfo* treeInfo, const char* dbName = "YouTube");
@@ -76,14 +80,29 @@ typedef struct
 }FullRec;
 
 /*
-    if not found return -1, else return id;
+    if key not found then return -1,
+    else return id;
     using getRecFromData(id) to get full rec
 */
 int searchRec(Tree* tree, const char* key);
 
+/*
+    using after searchRec to get complete data
+*/
 char* getRecFromData(int id);
 
+/*
+    if rec not exist, insert as a new record and return 0.
+    if res have existed, update data and return 1.
+*/
 int updateRec(Tree* tree, FullRec* rec);
+
+/*
+    given key or fullrec, delete this from DB.
+    if fail to delete, return 0
+    if delete successfully, return 1
+*/
+int deleteRec(Tree* tree, FullRec* rec = NULL, const char* key = NULL);
 
 void RewriteID_Offset();
 
